@@ -1,6 +1,5 @@
 package com.atorres.nttdata.transactionmicroservice.service;
 
-import com.atorres.nttdata.transactionmicroservice.client.WebClientMicroservice;
 import com.atorres.nttdata.transactionmicroservice.client.WebProductMicroservice;
 import com.atorres.nttdata.transactionmicroservice.exception.CustomException;
 import com.atorres.nttdata.transactionmicroservice.model.RequestTransaction;
@@ -16,8 +15,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -57,9 +54,7 @@ public class TransactionService {
                             Double balanceNuevo = account.getBalance() + request.getAmount();
                             account.setBalance(balanceNuevo);
                             return productService.updateAccount(mapper.toRequestUpdateAccount(balanceNuevo,request.getClientId(), request.getAccountId()))
-                                    .flatMap( ac ->{
-                                        return transaccionRepository.save(mapper.depositoRequestToDao(request,request.getAmount()));
-                                    });
+                                    .flatMap( ac ->transaccionRepository.save(mapper.depositoRequestToDao(request,request.getAmount())));
                         }
                 );
     }
@@ -86,6 +81,12 @@ public class TransactionService {
                 .flatMap(listAccount -> Flux.fromIterable(listAccount)
                         .flatMap(account -> productService.updateAccount(mapper.toRequestUpdateAccount(account.getBalance(),request.getClientId(),account.getId())))
                         .then(transaccionRepository.save(mapper.transRequestToTransDao(request))));
+
+    }
+
+    public Flux<TransactionDao> getAllTransactionByClient(String clientId){
+        return transaccionRepository.findAll()
+                .filter(trans -> trans.getClientId().equals(clientId));
 
     }
 }

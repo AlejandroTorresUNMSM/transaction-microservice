@@ -31,5 +31,9 @@ public class TransactionController {
         return transactionService.postTransferencia(request);
     }
 
+    @GetMapping("/all/{clientId}")
+    public Flux<TransactionDao> allTransaction(@PathVariable String clientId){
+        return transactionService.getAllTransactionByClient(clientId);
+    }
 
 }
