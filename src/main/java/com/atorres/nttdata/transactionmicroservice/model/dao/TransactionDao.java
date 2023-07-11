@@ -18,4 +18,5 @@ public class TransactionDao {
     private Double balance;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "America/Lima")
     private Date date;
+    private String clientId;
 }

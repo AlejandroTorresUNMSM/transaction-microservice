@@ -6,6 +6,6 @@ import lombok.Data;
 public class RequestTransaction {
     private String from;
     private String to;
-    private String category;
-    private Double balance;
+    private Double amount;
+    private String clientId;
 }

@@ -1,14 +1,13 @@
 package com.atorres.nttdata.transactionmicroservice.controller;
 
+import com.atorres.nttdata.transactionmicroservice.model.RequestTransaction;
 import com.atorres.nttdata.transactionmicroservice.model.RequestTransactionAccount;
 import com.atorres.nttdata.transactionmicroservice.model.dao.TransactionDao;
 import com.atorres.nttdata.transactionmicroservice.service.TransactionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -26,5 +25,11 @@ public class TransactionController {
     public Mono<TransactionDao> depositoCuenta(@RequestBody RequestTransactionAccount request){
         return transactionService.depositoCuenta(request);
     }
+
+    @PostMapping("")
+    public Mono<TransactionDao> transferencia(@RequestBody RequestTransaction request){
+        return transactionService.postTransferencia(request);
+    }
+
 
 }

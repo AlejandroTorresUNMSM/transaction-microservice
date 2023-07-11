@@ -3,22 +3,28 @@ package com.atorres.nttdata.transactionmicroservice.service;
 import com.atorres.nttdata.transactionmicroservice.client.WebClientMicroservice;
 import com.atorres.nttdata.transactionmicroservice.client.WebProductMicroservice;
 import com.atorres.nttdata.transactionmicroservice.exception.CustomException;
+import com.atorres.nttdata.transactionmicroservice.model.RequestTransaction;
 import com.atorres.nttdata.transactionmicroservice.model.RequestTransactionAccount;
+import com.atorres.nttdata.transactionmicroservice.model.dao.AccountDao;
 import com.atorres.nttdata.transactionmicroservice.model.dao.TransactionDao;
 import com.atorres.nttdata.transactionmicroservice.repository.TransaccionRepository;
 import com.atorres.nttdata.transactionmicroservice.utils.MapperTransaction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class TransactionService {
 
     @Autowired
     WebProductMicroservice productService;
-    @Autowired
-    WebClientMicroservice clientService;
 
     @Autowired
     MapperTransaction mapper;
@@ -56,5 +62,30 @@ public class TransactionService {
                                     });
                         }
                 );
+    }
+
+
+    public Mono<TransactionDao> postTransferencia(RequestTransaction request){
+        return productService.getAllAccountClient(request.getClientId())
+                .switchIfEmpty(Mono.error(new CustomException(HttpStatus.BAD_REQUEST,"No hay cuentas ligadas a este cliente")))
+                .filter(account -> account.getId().equals(request.getTo()) || account.getId().equals(request.getFrom()))
+                .collectList()
+                .map( listAccount -> listAccount.stream().collect(Collectors.toMap(AccountDao::getId, cuenta -> cuenta)))
+                .map(mapAccount -> {
+                    AccountDao accountFrom = mapAccount.get(request.getFrom());
+                    AccountDao accountTo = mapAccount.get(request.getTo());
+                    //Actualizamos los balance
+                    accountFrom.setBalance(accountFrom.getBalance() - request.getAmount());
+                    accountTo.setBalance(accountTo.getBalance() + request.getAmount());
+                    //Seteamos las cuentas actualizadas en el Map
+                    mapAccount.put(request.getFrom(), accountFrom);
+                    mapAccount.put(request.getTo(), accountTo);
+                    return mapAccount;
+                })
+                .map(mapAccount -> new ArrayList<>(mapAccount.values()))
+                .flatMap(listAccount -> Flux.fromIterable(listAccount)
+                        .flatMap(account -> productService.updateAccount(mapper.toRequestUpdateAccount(account.getBalance(),request.getClientId(),account.getId())))
+                        .then(transaccionRepository.save(mapper.transRequestToTransDao(request))));
+
     }
 }
