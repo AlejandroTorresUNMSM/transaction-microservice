@@ -3,8 +3,8 @@ package com.atorres.nttdata.transactionmicroservice.model;
 import lombok.Data;
 
 @Data
-public class RequestRetiro {
-    private String from;
+public class RequestTransactionAccount {
+    private String accountId;
     private String clientId;
-    private Double balance;
+    private Double amount;
 }

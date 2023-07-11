@@ -1,7 +1,6 @@
 package com.atorres.nttdata.transactionmicroservice.controller;
 
-import com.atorres.nttdata.transactionmicroservice.model.RequestRetiro;
-import com.atorres.nttdata.transactionmicroservice.model.RequestTransaction;
+import com.atorres.nttdata.transactionmicroservice.model.RequestTransactionAccount;
 import com.atorres.nttdata.transactionmicroservice.model.dao.TransactionDao;
 import com.atorres.nttdata.transactionmicroservice.service.TransactionService;
 import lombok.extern.slf4j.Slf4j;
@@ -18,9 +17,14 @@ import reactor.core.publisher.Mono;
 public class TransactionController {
     @Autowired
     TransactionService transactionService;
-    @PostMapping("/")
-    public Mono<TransactionDao> postTransaction(@RequestBody RequestRetiro request){
+    @PostMapping("/account/retiro")
+    public Mono<TransactionDao> retiroCuenta(@RequestBody RequestTransactionAccount request){
         return transactionService.retiroCuenta(request);
+    }
+
+    @PostMapping("/account/deposito")
+    public Mono<TransactionDao> depositoCuenta(@RequestBody RequestTransactionAccount request){
+        return transactionService.depositoCuenta(request);
     }
 
 }
