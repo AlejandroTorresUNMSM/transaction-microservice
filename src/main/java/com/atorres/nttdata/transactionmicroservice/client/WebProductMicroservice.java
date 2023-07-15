@@ -4,6 +4,8 @@ import com.atorres.nttdata.transactionmicroservice.model.RequestUpdateAccount;
 import com.atorres.nttdata.transactionmicroservice.model.dao.AccountDao;
 import com.atorres.nttdata.transactionmicroservice.model.dao.ClientDao;
 import com.atorres.nttdata.transactionmicroservice.model.dao.CreditDao;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
@@ -11,8 +13,10 @@ import reactor.core.publisher.Mono;
 
 @Component
 public class WebProductMicroservice {
-    WebClient client= WebClient.create("http://localhost:8081/api");
-
+    WebClient client = WebClient.builder()
+            .baseUrl("http://localhost:8081/api")
+            .defaultHeader(HttpHeaders.ACCEPT, MediaType.TEXT_EVENT_STREAM_VALUE)
+            .build();
     public Flux<AccountDao> getAllAccountClient(String id){
         return client.get()
                 .uri("/account/client/{id}",id)
@@ -25,7 +29,8 @@ public class WebProductMicroservice {
                 .uri("/account/update")
                 .bodyValue(request)
                 .retrieve()
-                .bodyToMono(AccountDao.class);
+                .bodyToFlux(AccountDao.class)
+                .single();
     }
 
 
