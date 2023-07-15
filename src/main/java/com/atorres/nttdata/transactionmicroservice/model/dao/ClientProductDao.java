@@ -14,4 +14,5 @@ public class ClientProductDao {
     private String client;
     private String product;
     private String category;
+    private String subcategory;
 }
