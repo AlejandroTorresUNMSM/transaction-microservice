@@ -40,14 +40,14 @@ public class MapperTransaction {
         request.setAccountId(from);
         return  request;
     }
-    public TransactionDao transRequestToTransDao(RequestTransaction request){
+    public TransactionDao transRequestToTransDao(RequestTransaction request,BigDecimal comision){
         TransactionDao trans = new TransactionDao();
         trans.setCategory("TRANSFERENCIA");
         trans.setFrom(request.getFrom());
         trans.setTo(request.getFrom());
         trans.setBalance(request.getAmount());
         trans.setDate(new Date());
-        trans.setComission(new BigDecimal("20"));
+        trans.setComission(comision);
         trans.setClientId(request.getClientId());
         return  trans;
     }

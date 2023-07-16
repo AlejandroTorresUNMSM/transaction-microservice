@@ -7,7 +7,9 @@ import com.atorres.nttdata.transactionmicroservice.model.RequestTransactionAccou
 import com.atorres.nttdata.transactionmicroservice.model.dao.AccountDao;
 import com.atorres.nttdata.transactionmicroservice.model.dao.TransactionDao;
 import com.atorres.nttdata.transactionmicroservice.repository.TransaccionRepository;
+import com.atorres.nttdata.transactionmicroservice.utils.ComissionEnum;
 import com.atorres.nttdata.transactionmicroservice.utils.MapperTransaction;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -16,9 +18,12 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class TransactionService {
 
     @Autowired
@@ -28,6 +33,8 @@ public class TransactionService {
     MapperTransaction mapper;
     @Autowired
     TransaccionRepository transaccionRepository;
+
+    private BigDecimal comisionTransferencia;
 
     public Mono<TransactionDao> retiroCuenta(RequestTransactionAccount request) {
         return productService.getAllAccountClient(request.getClientId())
@@ -67,21 +74,26 @@ public class TransactionService {
                 .filter(account -> account.getId().equals(request.getTo()) || account.getId().equals(request.getFrom()))
                 .collectList()
                 .map( listAccount -> listAccount.stream().collect(Collectors.toMap(AccountDao::getId, cuenta -> cuenta)))
-                .map(mapAccount -> {
+                .flatMap(mapAccount -> {
                     AccountDao accountFrom = mapAccount.get(request.getFrom());
                     AccountDao accountTo = mapAccount.get(request.getTo());
-                    //Actualizamos los balance
-                    accountFrom.setBalance(accountFrom.getBalance().subtract(request.getAmount()));
-                    accountTo.setBalance(accountTo.getBalance().add(request.getAmount()));
-                  //Seteamos las cuentas actualizadas en el Map
-                    mapAccount.put(request.getFrom(), accountFrom);
-                    mapAccount.put(request.getTo(), accountTo);
-                    return mapAccount;
+                    return getComission(request.getClientId(),accountFrom.getId(),request.getAmount())
+                            .map(value -> {
+                              comisionTransferencia = value;
+                              log.info("La comision asciende a: "+value);
+                              //Actualizamos los balance y restamos la comision
+                              accountFrom.setBalance(accountFrom.getBalance().subtract(request.getAmount()).subtract(value));
+                              accountTo.setBalance(accountTo.getBalance().add(request.getAmount()));
+                              //Seteamos las cuentas actualizadas en el Map
+                              mapAccount.put(request.getFrom(), accountFrom);
+                              mapAccount.put(request.getTo(), accountTo);
+                              return mapAccount;
+                            });
                 })
                 .map(mapAccount -> new ArrayList<>(mapAccount.values()))
                 .flatMap(listAccount -> Flux.fromIterable(listAccount)
                         .flatMap(account -> productService.updateAccount(mapper.toRequestUpdateAccount(account.getBalance(),request.getClientId(),account.getId())))
-                        .then(transaccionRepository.save(mapper.transRequestToTransDao(request))));
+                        .then(transaccionRepository.save(mapper.transRequestToTransDao(request,comisionTransferencia))));
 
     }
 
@@ -94,5 +106,21 @@ public class TransactionService {
   public Flux<TransactionDao> getAllTransactionByClientAnyMount(int mounth,String clientId){
     return transaccionRepository.findTransactionAnyMounth(2023, mounth)
             .filter(trans -> trans.getClientId().equals(clientId));
+  }
+
+  public Mono<BigDecimal> getComission(String idClient,String idAccount,BigDecimal amount){
+      return productService.getAllAccountClient(idClient)
+              .filter(account -> account.getId().equals(idAccount))
+              .switchIfEmpty(Mono.error(new CustomException(HttpStatus.NOT_FOUND, "No existe la cuenta")))
+              .single()
+              .flatMap(account -> {
+                BigDecimal porcentaje = this.getCommisionValue(account.getAccountCategory().toString());
+                log.info("Le toca comision por "+account.getAccountCategory().toString()+" "+porcentaje+"%");
+                return Mono.just(amount.multiply(porcentaje));
+              });
+  }
+
+  public BigDecimal getCommisionValue(String tipo){
+      return ComissionEnum.getValueByKey(tipo);
   }
 }
