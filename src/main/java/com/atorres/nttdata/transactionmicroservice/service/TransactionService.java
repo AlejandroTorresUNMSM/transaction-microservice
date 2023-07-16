@@ -91,9 +91,8 @@ public class TransactionService {
 
     }
 
-    public Flux<TransactionDao> getAllTransactionByClientThisMount(String cliendId){
-      return transaccionRepository.findAllByCurrentMonth()
-              .filter(trans -> trans.getClientId().equals(cliendId));
-
-    }
+  public Flux<TransactionDao> getAllTransactionByClientAnyMount(int mounth,String clientId){
+    return transaccionRepository.findTransactionAnyMounth(2023, mounth)
+            .filter(trans -> trans.getClientId().equals(clientId));
+  }
 }

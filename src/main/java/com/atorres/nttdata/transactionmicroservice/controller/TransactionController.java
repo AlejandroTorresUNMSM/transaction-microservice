@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDate;
+
 @RestController
 @RequestMapping("/api/transaction")
 @Slf4j
@@ -44,7 +46,7 @@ public class TransactionController {
      * @param request request
      * @return TransactionDao
      */
-    @PostMapping("")
+    @PostMapping("/")
     public Mono<TransactionDao> transferencia(@RequestBody RequestTransaction request){
         return transactionService.postTransferencia(request)
                 .doOnSuccess(v -> log.info("Transferencia entre tus cuentas exitosa"));
@@ -58,7 +60,7 @@ public class TransactionController {
     @GetMapping("/all/{clientId}")
     public Flux<TransactionDao> allTransaction(@PathVariable String clientId){
         return transactionService.getAllTransactionByClient(clientId)
-                .doOnNext(v-> log.info("Transferencia encontrada"+v.getId()));
+                .doOnNext(v-> log.info("Transferencia encontrada: "+v.getId()));
     }
 
     /**
@@ -66,11 +68,23 @@ public class TransactionController {
      * @param clientId id del cliente
      * @return Flux de TransactionDao
      */
-    @GetMapping("/all/thismounth/{clientId}")
+    @GetMapping("/thismounth/{clientId}")
     public Flux<TransactionDao> allTransactionthisMounth(@PathVariable String clientId){
-        return transactionService.getAllTransactionByClientThisMount(clientId)
+        return transactionService.getAllTransactionByClientAnyMount(LocalDate.now().getMonthValue(),clientId)
                 .doOnNext(v-> log.info("Transferencia de este mes: "+v.getId()));
     }
 
-
+    /**
+     * Metodo que trae todas las transferencia de cualquier mes del cliente
+     * @param mounth numero del mes
+     * @param clientId id del cliente
+     * @return Flux de TransactionDao
+     */
+    @GetMapping("/anymounth/{clientId}/{mounth}")
+    public Flux<TransactionDao> allTransactionAnyMounth(
+            @PathVariable String clientId,
+            @PathVariable int mounth) {
+        return transactionService.getAllTransactionByClientAnyMount(mounth,clientId)
+                .doOnNext(v-> log.info("Transferencia del mes {} : {}",mounth,v.getId()));
+    }
 }

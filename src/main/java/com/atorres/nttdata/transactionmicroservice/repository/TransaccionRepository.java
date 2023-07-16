@@ -12,13 +12,12 @@ import java.util.Date;
 
 @Repository
 public interface TransaccionRepository extends ReactiveMongoRepository<TransactionDao, String> {
-	@Query("{ 'fecha': { $gte: ?0, $lt: ?1 } }")
+	@Query("{ 'date': { $gte: ?0, $lt: ?1 } }")
 	Flux<TransactionDao> findAllByCurrentMonth(Date startOfMonth, Date startOfNextMonth);
 
-	default Flux<TransactionDao> findAllByCurrentMonth() {
-		LocalDate now = LocalDate.now();
-		LocalDate startOfMonth = now.withDayOfMonth(1);
-		LocalDate startOfNextMonth = now.plusMonths(1).withDayOfMonth(1);
+	default Flux<TransactionDao> findTransactionAnyMounth(int year, int month) {
+		LocalDate startOfMonth = LocalDate.of(year, month, 1);
+		LocalDate startOfNextMonth = startOfMonth.plusMonths(1);
 
 		Date startDate = Date.from(startOfMonth.atStartOfDay(ZoneId.systemDefault()).toInstant());
 		Date endDate = Date.from(startOfNextMonth.atStartOfDay(ZoneId.systemDefault()).toInstant());
