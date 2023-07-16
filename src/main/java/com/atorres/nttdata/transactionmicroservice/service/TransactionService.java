@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
@@ -32,12 +33,12 @@ public class TransactionService {
         return productService.getAllAccountClient(request.getClientId())
                 .filter(account -> account.getId().equals(request.getAccountId()))
                 .switchIfEmpty(Mono.error(new CustomException(HttpStatus.NOT_FOUND, "No existe cuenta para ese cliente")))
-                .filter(accountDao -> accountDao.getBalance() >= request.getAmount() && request.getAmount()>0)
+                .filter(accountDao -> accountDao.getBalance().compareTo(request.getAmount()) >= 0 && request.getAmount().compareTo(BigDecimal.ZERO) > 0)
                 .switchIfEmpty(Mono.error(new CustomException(HttpStatus.NOT_FOUND, "Ingreso un monto invalido")))
                 .single()
                 .flatMap(account -> {
-                            Double balanceNuevo = account.getBalance() - request.getAmount();
-                            return productService.updateAccount(mapper.toRequestUpdateAccount(balanceNuevo,request.getClientId(), request.getAccountId()))
+                  BigDecimal balanceNuevo = account.getBalance().subtract(request.getAmount());
+                  return productService.updateAccount(mapper.toRequestUpdateAccount(balanceNuevo,request.getClientId(), request.getAccountId()))
                                     .flatMap( ac ->transaccionRepository.save(mapper.retiroRequestToDao(request,request.getAmount())));
                         }
                 );
@@ -47,12 +48,12 @@ public class TransactionService {
         return productService.getAllAccountClient(request.getClientId())
                 .filter(account -> account.getId().equals(request.getAccountId()))
                 .switchIfEmpty(Mono.error(new CustomException(HttpStatus.NOT_FOUND, "No existe cuenta para ese cliente")))
-                .filter(accountDao -> 0 < request.getAmount() && accountDao.getBalance()>0)
+                .filter(accountDao -> 0 < request.getAmount().doubleValue() && accountDao.getBalance().doubleValue()>0)
                 .switchIfEmpty(Mono.error(new CustomException(HttpStatus.NOT_FOUND, "Ingreso un monto invalido")))
                 .single()
                 .flatMap(account -> {
-                            Double balanceNuevo = account.getBalance() + request.getAmount();
-                            account.setBalance(balanceNuevo);
+                  BigDecimal balanceNuevo = account.getBalance().add(request.getAmount());
+                  account.setBalance(balanceNuevo);
                             return productService.updateAccount(mapper.toRequestUpdateAccount(balanceNuevo,request.getClientId(), request.getAccountId()))
                                     .flatMap( ac ->transaccionRepository.save(mapper.depositoRequestToDao(request,request.getAmount())));
                         }
@@ -70,9 +71,9 @@ public class TransactionService {
                     AccountDao accountFrom = mapAccount.get(request.getFrom());
                     AccountDao accountTo = mapAccount.get(request.getTo());
                     //Actualizamos los balance
-                    accountFrom.setBalance(accountFrom.getBalance() - request.getAmount());
-                    accountTo.setBalance(accountTo.getBalance() + request.getAmount());
-                    //Seteamos las cuentas actualizadas en el Map
+                    accountFrom.setBalance(accountFrom.getBalance().subtract(request.getAmount()));
+                    accountTo.setBalance(accountTo.getBalance().add(request.getAmount()));
+                  //Seteamos las cuentas actualizadas en el Map
                     mapAccount.put(request.getFrom(), accountFrom);
                     mapAccount.put(request.getTo(), accountTo);
                     return mapAccount;
@@ -87,6 +88,12 @@ public class TransactionService {
     public Flux<TransactionDao> getAllTransactionByClient(String clientId){
         return transaccionRepository.findAll()
                 .filter(trans -> trans.getClientId().equals(clientId));
+
+    }
+
+    public Flux<TransactionDao> getAllTransactionByClientThisMount(String cliendId){
+      return transaccionRepository.findAllByCurrentMonth()
+              .filter(trans -> trans.getClientId().equals(cliendId));
 
     }
 }
