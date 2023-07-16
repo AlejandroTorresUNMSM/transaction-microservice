@@ -44,7 +44,7 @@ public class MapperTransaction {
         TransactionDao trans = new TransactionDao();
         trans.setCategory("TRANSFERENCIA");
         trans.setFrom(request.getFrom());
-        trans.setTo(request.getFrom());
+        trans.setTo(request.getTo());
         trans.setBalance(request.getAmount());
         trans.setDate(new Date());
         trans.setComission(comision);

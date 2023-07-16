@@ -2,6 +2,7 @@ package com.atorres.nttdata.transactionmicroservice.controller;
 
 import com.atorres.nttdata.transactionmicroservice.model.RequestTransaction;
 import com.atorres.nttdata.transactionmicroservice.model.RequestTransactionAccount;
+import com.atorres.nttdata.transactionmicroservice.model.ResponseComission;
 import com.atorres.nttdata.transactionmicroservice.model.dao.TransactionDao;
 import com.atorres.nttdata.transactionmicroservice.service.TransactionService;
 import lombok.extern.slf4j.Slf4j;
@@ -86,5 +87,19 @@ public class TransactionController {
             @PathVariable int mounth) {
         return transactionService.getAllTransactionByClientAnyMount(mounth,clientId)
                 .doOnNext(v-> log.info("Transferencia del mes {} : {}",mounth,v.getId()));
+    }
+
+    /**
+     * Metodo que retorna toda la comision cobrada a un producto durante el mes actual
+     * @param clientId id del cliento
+     * @param productId id del producto
+     * @return ResponseComission
+     */
+    @GetMapping("/comission/{clientId}/{productId}")
+    public Mono<ResponseComission> getComissionProduct(
+            @PathVariable String clientId,
+            @PathVariable String productId) {
+        return transactionService.getComissionReport(clientId,productId)
+                .doOnSuccess(v-> log.info("Comision del mes asciende a: {}",v.getComissionTotal()));
     }
 }

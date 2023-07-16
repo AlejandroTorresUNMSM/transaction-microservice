@@ -4,6 +4,7 @@ import com.atorres.nttdata.transactionmicroservice.client.WebProductMicroservice
 import com.atorres.nttdata.transactionmicroservice.exception.CustomException;
 import com.atorres.nttdata.transactionmicroservice.model.RequestTransaction;
 import com.atorres.nttdata.transactionmicroservice.model.RequestTransactionAccount;
+import com.atorres.nttdata.transactionmicroservice.model.ResponseComission;
 import com.atorres.nttdata.transactionmicroservice.model.dao.AccountDao;
 import com.atorres.nttdata.transactionmicroservice.model.dao.TransactionDao;
 import com.atorres.nttdata.transactionmicroservice.repository.TransaccionRepository;
@@ -17,9 +18,11 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -122,5 +125,18 @@ public class TransactionService {
 
   public BigDecimal getCommisionValue(String tipo){
       return ComissionEnum.getValueByKey(tipo);
+  }
+
+  public Mono<ResponseComission> getComissionReport(String clientId,String productId){
+      return this.getAllTransactionByClientAnyMount(LocalDate.now().getMonthValue(),clientId)
+              .filter(trans -> trans.getFrom().equals(productId))
+              .collectList()
+              .flatMap(transList -> Mono.just(transList.stream()))
+              .flatMap(stream -> {
+                BigDecimal totalComission = stream
+                        .map(trans -> Objects.requireNonNullElse(trans.getComission(),BigDecimal.ZERO))
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                return Mono.just(new ResponseComission(clientId,totalComission));
+              });
   }
 }
