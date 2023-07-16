@@ -5,11 +5,9 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 
-
 @Data
 @AllArgsConstructor
-public class ResponseComission {
-	private String productId;
-	private BigDecimal comissionTotal;
-
+public class ResponseAvgAmount {
+	private String clientId;
+	private BigDecimal avgAmount;
 }

@@ -17,6 +17,14 @@ public class WebProductMicroservice {
             .baseUrl("http://localhost:8081/api")
             .defaultHeader(HttpHeaders.ACCEPT, MediaType.TEXT_EVENT_STREAM_VALUE)
             .build();
+
+    public Mono<AccountDao> getAccount(String productId){
+        return client.get()
+                .uri("/account/{productId}",productId)
+                .retrieve()
+                .bodyToFlux(AccountDao.class)
+                .single();
+    }
     public Flux<AccountDao> getAllAccountClient(String id){
         return client.get()
                 .uri("/account/client/{id}",id)

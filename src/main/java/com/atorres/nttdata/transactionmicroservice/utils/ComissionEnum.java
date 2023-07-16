@@ -5,7 +5,8 @@ import java.math.BigDecimal;
 public enum ComissionEnum {
 	PERSONAL("normal",new BigDecimal("0.03")),
 	VIP("vip",new BigDecimal("0.02")),
-	MYPE("mype",new BigDecimal("0.01"));
+	MYPE("mype",new BigDecimal("0.01")),
+	NINGUNO("ninguno",new BigDecimal("0.0"));
 
 	private final String key;
 	private final BigDecimal value;

@@ -2,6 +2,7 @@ package com.atorres.nttdata.transactionmicroservice.controller;
 
 import com.atorres.nttdata.transactionmicroservice.model.RequestTransaction;
 import com.atorres.nttdata.transactionmicroservice.model.RequestTransactionAccount;
+import com.atorres.nttdata.transactionmicroservice.model.ResponseAvgAmount;
 import com.atorres.nttdata.transactionmicroservice.model.ResponseComission;
 import com.atorres.nttdata.transactionmicroservice.model.dao.TransactionDao;
 import com.atorres.nttdata.transactionmicroservice.service.TransactionService;
@@ -10,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
 import java.time.LocalDate;
 
 @RestController
@@ -51,6 +51,12 @@ public class TransactionController {
     public Mono<TransactionDao> transferencia(@RequestBody RequestTransaction request){
         return transactionService.postTransferencia(request)
                 .doOnSuccess(v -> log.info("Transferencia entre tus cuentas exitosa"));
+    }
+
+    @PostMapping("/terceros")
+    public Mono<TransactionDao> transferenciaTerceros(@RequestBody RequestTransaction request){
+        return transactionService.getTransferenciaTerceros(request)
+                .doOnSuccess(v -> log.info("Transferencia a terceros exitosa"));
     }
 
     /**
@@ -101,5 +107,17 @@ public class TransactionController {
             @PathVariable String productId) {
         return transactionService.getComissionReport(clientId,productId)
                 .doOnSuccess(v-> log.info("Comision del mes asciende a: {}",v.getComissionTotal()));
+    }
+
+    /**
+     * Metodo que calcula el promedio de montos transferidos por dia para todos los producto del cliente
+     * @param clientId id cliente
+     * @return ResponseAvgAmount
+     */
+    @GetMapping("/avg/{clientId}")
+    public Mono<ResponseAvgAmount> getAvgAmount(
+            @PathVariable String clientId) {
+        return transactionService.getAvgAmount(clientId)
+                .doOnSuccess(v-> log.info("Transfirio en promedio "+v.getAvgAmount()+" por dia"));
     }
 }
