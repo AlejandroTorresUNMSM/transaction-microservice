@@ -2,7 +2,6 @@ package com.atorres.nttdata.transactionmicroservice.client;
 
 import com.atorres.nttdata.transactionmicroservice.model.RequestUpdateAccount;
 import com.atorres.nttdata.transactionmicroservice.model.dao.AccountDao;
-import com.atorres.nttdata.transactionmicroservice.model.dao.ClientDao;
 import com.atorres.nttdata.transactionmicroservice.model.dao.CreditDao;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;

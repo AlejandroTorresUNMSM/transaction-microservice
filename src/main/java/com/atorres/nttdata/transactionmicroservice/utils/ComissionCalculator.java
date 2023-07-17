@@ -31,7 +31,7 @@ public class ComissionCalculator {
 						.switchIfEmpty(Mono.error(new CustomException(HttpStatus.NOT_FOUND, "No existe la cuenta")))
 						.single()
 						.flatMap(account -> getLimitTransaction(listTrans,idAccount)
-										.flatMap(value -> value ? Mono.just(new BigDecimal("0.0")) : Mono.just(getCommisionValue(account.getAccountCategory().toString())))
+										.flatMap(value -> Boolean.TRUE.equals(value) ? Mono.just(new BigDecimal("0.0")) : Mono.just(getCommisionValue(account.getAccountCategory().toString())))
 										.flatMap(value -> Mono.just(amount.multiply(value))));
 	}
 
