@@ -33,10 +33,9 @@ public class MapperTransaction {
         transactionDao.setClientId(request.getClientId());
         return  transactionDao;
     }
-    public RequestUpdateAccount toRequestUpdateAccount(BigDecimal balance,String clientId,String from){
+    public RequestUpdateAccount toRequestUpdateAccount(BigDecimal balance,String from){
         RequestUpdateAccount request = new RequestUpdateAccount();
         request.setBalance(balance);
-        request.setClientId(clientId);
         request.setAccountId(from);
         return  request;
     }

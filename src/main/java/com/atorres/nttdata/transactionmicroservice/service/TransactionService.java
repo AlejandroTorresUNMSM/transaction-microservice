@@ -10,7 +10,6 @@ import com.atorres.nttdata.transactionmicroservice.model.dao.AccountDao;
 import com.atorres.nttdata.transactionmicroservice.model.dao.TransactionDao;
 import com.atorres.nttdata.transactionmicroservice.repository.TransaccionRepository;
 import com.atorres.nttdata.transactionmicroservice.utils.ComissionCalculator;
-import com.atorres.nttdata.transactionmicroservice.utils.ComissionEnum;
 import com.atorres.nttdata.transactionmicroservice.utils.MapperTransaction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +22,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -53,7 +54,7 @@ public class TransactionService {
 						.single()
 						.flatMap(account -> {
 											BigDecimal balanceNuevo = account.getBalance().subtract(request.getAmount());
-											return productService.updateAccount(mapper.toRequestUpdateAccount(balanceNuevo, request.getClientId(), request.getAccountId()))
+											return productService.updateAccount(mapper.toRequestUpdateAccount(balanceNuevo,request.getAccountId()))
 															.flatMap(ac -> transaccionRepository.save(mapper.retiroRequestToDao(request, request.getAmount())));
 										}
 						);
@@ -74,7 +75,7 @@ public class TransactionService {
 						.flatMap(account -> {
 											BigDecimal balanceNuevo = account.getBalance().add(request.getAmount());
 											account.setBalance(balanceNuevo);
-											return productService.updateAccount(mapper.toRequestUpdateAccount(balanceNuevo, request.getClientId(), request.getAccountId()))
+											return productService.updateAccount(mapper.toRequestUpdateAccount(balanceNuevo, request.getAccountId()))
 															.flatMap(ac -> transaccionRepository.save(mapper.depositoRequestToDao(request, request.getAmount())));
 										}
 						);
@@ -98,24 +99,62 @@ public class TransactionService {
 											.map(value -> {
 												comisionTransferencia = value;
 												log.info("La comision asciende a: " + value);
-												//Actualizamos los balance y restamos la comision
-												accountFrom.setBalance(accountFrom.getBalance().subtract(request.getAmount()).subtract(value));
-												accountTo.setBalance(accountTo.getBalance().add(request.getAmount()));
-												//Seteamos las cuentas actualizadas en el Map
-												mapAccount.put(request.getFrom(), accountFrom);
-												mapAccount.put(request.getTo(), accountTo);
-												return mapAccount;
+												return modifyMapAccount(accountFrom,accountTo,value,request.getAmount());
 											});
 						})
 						.map(mapAccount -> new ArrayList<>(mapAccount.values()))
 						.flatMap(listAccount -> Flux.fromIterable(listAccount)
-										.flatMap(account -> productService.updateAccount(mapper.toRequestUpdateAccount(account.getBalance(), request.getClientId(), account.getId())))
+										.flatMap(account -> productService.updateAccount(mapper.toRequestUpdateAccount(account.getBalance(), account.getId())))
 										.then(transaccionRepository.save(mapper.transRequestToTransDao(request, comisionTransferencia))));
 
 	}
 
+	/**
+	 * Metodo para transferencia a terceros
+	 * @param request request
+	 * @return transactionDao
+	 */
 	public Mono<TransactionDao> getTransferenciaTerceros(RequestTransaction request){
-		return Mono.just(new TransactionDao());
+		return productService.getAllAccountClient(request.getClientId())
+						.switchIfEmpty(Mono.error(new CustomException(HttpStatus.BAD_REQUEST, "No hay cuentas ligadas a este cliente")))
+						.filter(account -> account.getId().equals(request.getFrom()))
+						.doOnNext(value -> log.info("cuenta encontrada "+ value.toString()))
+						.single()
+						.concatWith(productService.getAccount(request.getTo()))
+						.collectList()
+						.map(listAccount -> listAccount.stream().collect(Collectors.toMap(AccountDao::getId, cuenta -> cuenta)))
+						.flatMap(mapAccount -> {
+							AccountDao accountFrom = mapAccount.get(request.getFrom());
+							AccountDao accountTo = mapAccount.get(request.getTo());
+							return comissionCalculator.getComission(request.getClientId(), accountFrom.getId(), request.getAmount(), getAllTransactionByClientAnyMount(LocalDate.now().getMonthValue(), request.getClientId()))
+											.map(value -> {
+												comisionTransferencia = value;
+												log.info("La comision asciende a: " + value);
+												return modifyMapAccount(accountFrom,accountTo,value,request.getAmount());
+											});
+						})
+						.map(mapAccount -> new ArrayList<>(mapAccount.values()))
+						.flatMap(listAccount -> Flux.fromIterable(listAccount)
+										.flatMap(account -> productService.updateAccount(mapper.toRequestUpdateAccount(account.getBalance(), account.getId())))
+										.then(transaccionRepository.save(mapper.transRequestToTransDao(request, comisionTransferencia))));
+	}
+
+	/**
+	 * Metodo para actualizar el Map de cuentas
+	 * @param accountFrom cuenta salida
+	 * @param accountTo cuenta destino
+	 * @param comision comision
+	 * @param amount monto
+	 * @return map
+	 */
+	private Map<String,AccountDao> modifyMapAccount(AccountDao accountFrom,AccountDao accountTo,BigDecimal comision,BigDecimal amount){
+		Map<String,AccountDao> mapAccount = new HashMap<>();
+		accountFrom.setBalance(accountFrom.getBalance().subtract(amount).subtract(comision));
+		accountTo.setBalance(accountTo.getBalance().add(amount));
+		//Seteamos las cuentas actualizadas en el Map
+		mapAccount.put(accountFrom.getId(), accountFrom);
+		mapAccount.put(accountTo.getId(), accountTo);
+		return mapAccount;
 	}
 
 	/**
@@ -137,6 +176,11 @@ public class TransactionService {
 	 */
 	public Flux<TransactionDao> getAllTransactionByClientAnyMount(int mounth, String clientId) {
 		return transaccionRepository.findTransactionAnyMounth(2023, mounth)
+						.filter(trans -> trans.getClientId().equals(clientId));
+	}
+
+	public Flux<TransactionDao> getCurrentMounthTrans(String clientId) {
+		return transaccionRepository.findTransactionAnyMounth(2023, LocalDate.now().getMonthValue())
 						.filter(trans -> trans.getClientId().equals(clientId));
 	}
 
